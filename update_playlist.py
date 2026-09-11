@@ -5,7 +5,10 @@ BD_URL = "https://iptv-org.github.io/iptv/countries/bd.m3u"
 IN_URL = "https://iptv-org.github.io/iptv/countries/in.m3u"
 OUTPUT_FILE = "BD-IN-FREE.m3u"
 
-# আপনার পছন্দের চ্যানেলগুলোর ফিল্টার লিস্ট
+# EPG Link (Bangladesh + India)
+EPG_URL = "https://iptv-org.github.io/epg/guides/bd/bengali.xml,https://iptv-org.github.io/epg/guides/in/hindi.xml"
+
+# পছন্দের চ্যানেলগুলোর ফিল্টার লিস্ট
 KEYWORDS = ["star jalsha", "zee bangla", "enterr10", "dd bangla"]
 
 def fetch_m3u(url):
@@ -23,8 +26,11 @@ lines = fetch_m3u(BD_URL) + fetch_m3u(IN_URL)
 channels = []
 current_extinf = ""
 
-# Parse m3u lines
+# Parse m3u lines and clean spaces
 for line in lines:
+    line = line.strip() # Remove extra spaces/newlines
+    if not line:
+        continue
     if line.startswith("#EXTINF"):
         current_extinf = line
     elif line.startswith("http") and current_extinf:
@@ -45,13 +51,16 @@ for extinf, url in unique_channels:
     else:
         other_channels.append((extinf, url))
 
-# Save to BD-IN-FREE.m3u
+# Save to BD-IN-FREE.m3u with EPG header
 with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-    f.write("#EXTM3U\n")
-    # পছন্দের চ্যানেলগুলো সবার উপরে থাকবে
+    # ফাইলের শুরুতে EPG লিংক যুক্ত করা হচ্ছে
+    f.write(f'#EXTM3U x-tvg-url="{EPG_URL}"\n')
+    
+    # পছন্দের চ্যানেলগুলো
     for extinf, url in priority_channels:
         f.write(f"{extinf}\n{url}\n")
-    # এরপর বাকি চ্যানেলগুলো থাকবে
+        
+    # বাকি চ্যানেলগুলো
     for extinf, url in other_channels:
         f.write(f"{extinf}\n{url}\n")
 
