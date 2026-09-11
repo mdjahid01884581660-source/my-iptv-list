@@ -1,0 +1,58 @@
+import urllib.request
+
+# iptv-org sources
+BD_URL = "https://iptv-org.github.io/iptv/countries/bd.m3u"
+IN_URL = "https://iptv-org.github.io/iptv/countries/in.m3u"
+OUTPUT_FILE = "BD-IN-FREE.m3u"
+
+# আপনার পছন্দের চ্যানেলগুলোর ফিল্টার লিস্ট
+KEYWORDS = ["star jalsha", "zee bangla", "enterr10", "dd bangla"]
+
+def fetch_m3u(url):
+    try:
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req) as response:
+            return response.read().decode('utf-8').splitlines()
+    except Exception as e:
+        print(f"Error fetching {url}: {e}")
+        return []
+
+print("Fetching playlists...")
+lines = fetch_m3u(BD_URL) + fetch_m3u(IN_URL)
+
+channels = []
+current_extinf = ""
+
+# Parse m3u lines
+for line in lines:
+    if line.startswith("#EXTINF"):
+        current_extinf = line
+    elif line.startswith("http") and current_extinf:
+        channels.append((current_extinf, line))
+        current_extinf = ""
+
+# Remove duplicates
+unique_channels = list(set(channels))
+
+priority_channels = []
+other_channels = []
+
+# Filter and sort
+for extinf, url in unique_channels:
+    extinf_lower = extinf.lower()
+    if any(kw in extinf_lower for kw in KEYWORDS):
+        priority_channels.append((extinf, url))
+    else:
+        other_channels.append((extinf, url))
+
+# Save to BD-IN-FREE.m3u
+with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+    f.write("#EXTM3U\n")
+    # পছন্দের চ্যানেলগুলো সবার উপরে থাকবে
+    for extinf, url in priority_channels:
+        f.write(f"{extinf}\n{url}\n")
+    # এরপর বাকি চ্যানেলগুলো থাকবে
+    for extinf, url in other_channels:
+        f.write(f"{extinf}\n{url}\n")
+
+print(f"Playlist updated! Total channels: {len(priority_channels) + len(other_channels)}")
