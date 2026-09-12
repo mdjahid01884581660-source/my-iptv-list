@@ -2,31 +2,46 @@ name: Auto Update IPTV Playlist
 
 on:
   schedule:
-    - cron: "0 0 * * *" # প্রতিদিন বাংলাদেশ সময় সকাল ৬টায় (UTC 00:00) আপডেট হবে
-  workflow_dispatch: # আপনি চাইলে ম্যানুয়ালিও রান করতে পারবেন
+    - cron: "17 0 * * *"   # প্রতিদিন বাংলাদেশ সময় সকাল ৬:১৭
+  workflow_dispatch:
 
 jobs:
   update-playlist:
     runs-on: ubuntu-latest
+
     permissions:
-      contents: write # ফাইলে পরিবর্তন সেভ করার পারমিশন
+      contents: write
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: "3.x"
+          cache: "pip"
 
       - name: Run Update Script
-        run: python update_playlist.py
+        run: |
+          python update_playlist.py
+
+      - name: Check Playlist
+        run: |
+          test -s BD-IN-FREE.m3u
+          echo "Playlist OK"
+          echo "Entries: $(grep -c '^#EXTINF:' BD-IN-FREE.m3u || true)"
 
       - name: Commit and Push Changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+
           git add BD-IN-FREE.m3u
-          git commit -m "Auto-update BD-IN-FREE.m3u" || exit 0
-          git push
+
+          if git diff --cached --quiet; then
+            echo "No playlist changes."
+          else
+            git commit -m "Auto-update BD-IN-FREE.m3u"
+            git push
+          fi
